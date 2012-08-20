@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?><!-- $Id: pom.xml 336 2011-02-26 22:20:22Z ljnelson $ -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <artifactId>edugility-callables-jndi</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+
+  <parent>
+    <groupId>com.edugility</groupId>
+    <artifactId>edugility-callables</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <name>Edugility Callables JNDI</name>
+  <description>Edugility Callables JNDI</description>
+
+</project>
