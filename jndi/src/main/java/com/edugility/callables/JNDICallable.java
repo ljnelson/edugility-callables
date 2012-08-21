@@ -31,15 +31,24 @@ import java.io.Serializable;
 
 import java.lang.reflect.Method;
 
+import java.util.Arrays;
+
 import java.util.concurrent.Callable;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
+import static java.util.logging.Level.FINER;
+
 public class JNDICallable<T> implements Callable<T>, Serializable {
 
   private static final long serialVersionUID = 1L;
+
+  protected transient Logger logger;
 
   private transient Context context;
 
@@ -65,6 +74,7 @@ public class JNDICallable<T> implements Callable<T>, Serializable {
 
   public JNDICallable(final String jndiName, final Class<?> cls, final String methodName, final Class<?>[] parameterTypes, final Object[] parameterValues) {
     super();
+    this.logger = this.createLogger();
     this.jndiName = jndiName;
     this.cls = cls;
     this.methodName = methodName;
@@ -74,6 +84,7 @@ public class JNDICallable<T> implements Callable<T>, Serializable {
 
   public JNDICallable(final Object target, final Method method, final Object... parameterValues) {
     super();
+    this.logger = this.createLogger();
     this.jndiName = null;
     this.target = target;
     if (target == null) {
@@ -96,6 +107,10 @@ public class JNDICallable<T> implements Callable<T>, Serializable {
     return new InitialContext();
   }
 
+  protected Logger createLogger() {
+    return Logger.getLogger(this.getClass().getName());
+  }
+
   public Object[] getParameterValues() {
     return this.parameterValues;
   }
@@ -114,10 +129,19 @@ public class JNDICallable<T> implements Callable<T>, Serializable {
 
   @Override
   public T call() throws Exception {
+    if (this.logger != null && this.logger.isLoggable(FINER)) {
+      this.logger.entering(this.getClass().getName(), "call");
+    }
     T returnValue = null;
     
     if (this.method == null && this.methodName != null && this.cls != null) {
+      if (this.logger != null && this.logger.isLoggable(FINER)) {
+        this.logger.logp(FINER, this.getClass().getName(), "call", String.format("Looking up %s#%s(%s)", this.cls.getName(), this.methodName, toParameterString(this.parameterTypes)));
+      }
       this.method = this.cls.getMethod(this.methodName, this.parameterTypes);
+      if (this.logger != null && this.logger.isLoggable(FINER)) {
+        this.logger.logp(FINER, this.getClass().getName(), "call", String.format("Method to invoke: %s", this.method));
+      }
     }
     
     if (this.method != null) {
@@ -126,17 +150,66 @@ public class JNDICallable<T> implements Callable<T>, Serializable {
       }
       
       if (this.context != null && this.jndiName != null && (this.target == null || !this.getCache())) {
+        if (this.logger != null && this.logger.isLoggable(FINER)) {
+          this.logger.logp(FINER, this.getClass().getName(), "call", String.format("Looking up %s in JNDI context %s", this.jndiName, this.context));
+        }
         this.target = this.context.lookup(this.jndiName);
+        if (this.logger != null && this.logger.isLoggable(FINER)) {
+          this.logger.logp(FINER, this.getClass().getName(), "call", String.format("Found %s in JNDI context %s under name %s", this.target, this.context, this.jndiName));
+        }
       }
       
       if (this.target != null) {   
+        if (this.logger != null && this.logger.isLoggable(FINER)) {
+          this.logger.logp(FINER, this.getClass().getName(), "call", String.format("Invoking %s on %s with %s", this.method, this.target, toParameterString(this.parameterValues)));
+        }
         @SuppressWarnings("unchecked")
         final T temp = (T)this.method.invoke(this.target, this.parameterValues);
         returnValue = temp;
+        if (this.logger != null && this.logger.isLoggable(FINER)) {
+          this.logger.logp(FINER, this.getClass().getName(), "call", String.format("Result of invocation: %s", temp));
+        }
       }
     }
     
+    if (this.logger != null && this.logger.isLoggable(FINER)) {
+      this.logger.exiting(this.getClass().getName(), "call", returnValue);
+    }
     return returnValue;
+  }
+
+  private static final String toParameterString(final Object[] parameterValues) {
+    final StringBuilder sb = new StringBuilder();
+    if (parameterValues != null) {
+      final int size = parameterValues.length;
+      for (int i = 0; i < size; i++) {
+        final Object o = parameterValues[i];
+        if (o != null) {
+          sb.append(o.toString());
+          if (i < size - 1) {
+            sb.append(", ");
+          }
+        }
+      }
+    }
+    return sb.toString();
+  }
+
+  private static final String toParameterString(final Class<?>[] parameterTypes) {
+    final StringBuilder sb = new StringBuilder();
+    if (parameterTypes != null) {
+      final int size = parameterTypes.length;
+      for (int i = 0; i < size; i++) {
+        final Class<?> c = parameterTypes[i];
+        if (c != null) {
+          sb.append(c.getName());
+          if (i < size - 1) {
+            sb.append(", ");
+          }
+        }
+      }
+    }
+    return sb.toString();
   }
 
 }
